@@ -65,7 +65,7 @@ function App() {
 
     //CHECK IF BOTH THE INPUTTED WORD AND CORRECT ANSWER IS EQUAL
 
-    if (joinLetter == wordPuzzle[index]) {
+    if (joinLetter === wordPuzzle[index]) {
       no++;
       setIndex(no); //PROCEED TO THE NEXT QUESTION
     } else {
