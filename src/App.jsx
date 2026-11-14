@@ -1,177 +1,149 @@
 import './App.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowsRotate } from '@fortawesome/free-solid-svg-icons';
-//import Crossword from './components/crossWord';
 import { useState } from 'react';
 
+// The original hard-coded questions and letter banks are deliberately preserved.
+const wordPuzzle = ["GRIPO", "SARANGGOLA", "KANDILA", "ILAW", "ZIPPER", "ANINO"];
+const letterPuzz = ["AGRXVOIIHE", "SXZRNJJAGL", "KJLINUA", "VIUOA", "TSZPREQP", "OBALUKI"];
+const description = [
+  "Nahihilo si Lolo, Nasusuka si Lola",
+  "Hilain Pababa, Lalong Tumataas",
+  "Kung kailan mo pinatay, saka pa humaba ang buhay",
+  "Isang butil ng palay, sakop lahat ng bahay",
+  "Dumaan ang hari, nagkagatan ang mga pari",
+  "Ako ay may kaibigan, kasama ko kahit saan"
+];
 
 function App() {
   const [index, setIndex] = useState(0);
-  const [letterChar, setLetter] = useState('');
-  const letterVal = document.querySelectorAll('.letter-value');
-  const letterInput = document.querySelectorAll('.letter-input');
-  const rumbleLetter = document.querySelectorAll('.rumble-letter');
-  const wordPuzzle = ["GRIPO", "SARANGGOLA", "KANDILA", "ILAW", "ZIPPER", "ANINO"];
-  const letterPuzz = ["AGRXVOIIHE", "SXZRNJJAGL", "KJLINUA", "VIUOA", "TSZPREQP", "OBALUKI"];
-  const description = [
-    "Nahihilo si Lolo, Nasusuka si Lola",
-    "Hilain Pababa, Lalong Tumataas",
-    "Kung kailan mo pinatay, saka pa humaba ang buhay",
-    "Isang butil ng palay, sakop lahat ng bahay",
-    "Dumaan ang hari, nagkagatan ang mga pari",
-    "Ako ay may kaibigan, kasama ko kahit saan"
-  ];
+  // Each answer slot stores the selected letter AND its bank position.
+  // Tracking positions lets us handle duplicate letters without losing a tile.
+  const [placedLetters, setPlacedLetters] = useState({});
+  const [feedback, setFeedback] = useState('');
+  const finished = index >= wordPuzzle.length;
+  const answer = finished ? '' : wordPuzzle[index];
+  const usedTiles = new Set(Object.values(placedLetters).map(({ tileIndex }) => tileIndex));
 
-  //HANDLELETTER FUNCTION THAT RECEIVES THE CLICKED BUTTON LETTER
-  const handleLetter = (event) => {
-    const inputElement = event.target;
-    inputElement.value = letterChar; // Set the focused input's value
-    setLetter("")
+  const putLetter = (letter, tileIndex) => {
+    if (usedTiles.has(tileIndex) || finished) return;
+    // Fill the first empty slot (the pre-filled letters stay unchanged).
+    const firstEmpty = answer.split('').findIndex((_, i) => i % 2 === 0 && !placedLetters[i]);
+    if (firstEmpty === -1) return;
+    setPlacedLetters((prev) => ({ ...prev, [firstEmpty]: { letter, tileIndex } }));
+    setFeedback('');
   };
 
-  //PUTLETTER FUNCTION THAT DETERMINE THE CURRENT VALUE OF LETTER
-  const putLetter = (event, letter) => {
-    const inputElement = event.target;
-    setLetter(letter)
-
-    inputElement.style.visibility = "hidden";
+  // Tap a filled slot to return its letter to the bank.
+  const removeLetter = (slotIndex) => {
+    setPlacedLetters((prev) => {
+      const updated = { ...prev };
+      delete updated[slotIndex];
+      return updated;
+    });
+    setFeedback('');
   };
 
-  //RESET ALL THE CHANGES
   const handleReset = () => {
-    letterInput.forEach((el) => {
-      el.value = "";
-    });
-
-    rumbleLetter.forEach((el) => {
-      el.style.visibility = "visible";
-    });
+    setPlacedLetters({});
+    setFeedback('');
   };
 
-  //SUBMIT THE ANSWER
-  const submitAnswer = (event, no) => {
+  const submitAnswer = (event) => {
     event.preventDefault();
-
-    const letterArray = [...letterVal];
-    const valuesOfLetter = [];
-
-    letterArray.forEach((el) => {
-      let letterVal = el.value;
-
-      valuesOfLetter.push(letterVal)
-    });
-
-    let joinLetter = valuesOfLetter.join('');
-
-    //CHECK IF BOTH THE INPUTTED WORD AND CORRECT ANSWER IS EQUAL
-
-    if (joinLetter === wordPuzzle[index]) {
-      no++;
-      setIndex(no); //PROCEED TO THE NEXT QUESTION
+    if (finished) return;
+    const entered = answer.split('').map((letter, i) => i % 2 === 0 ? (placedLetters[i]?.letter || '') : letter).join('');
+    if (answer.split('').some((_, i) => i % 2 === 0 && !placedLetters[i])) {
+      setFeedback('Punan muna ang lahat ng bakanteng kahon.');
+      return;
+    }
+    if (entered === answer) {
+      setIndex((prev) => prev + 1);
+      setPlacedLetters({});
+      setFeedback('');
     } else {
-      alert("Wrong!");
-    };
+      setFeedback('Hindi pa tama. Subukan ulit!');
+    }
+  };
 
-    handleReset();
-    setLetter();
-  }
-
-  const tryAgain = (event) => {
-    event.preventDefault();
-
+  const tryAgain = () => {
     setIndex(0);
-  }
-
+    handleReset();
+  };
 
   return (
     <div className="App">
-      <header className='main-header'>
-        <h1>BUGTO<span className='span-yellow'>NG</span></h1>
+      <header className="main-header">
+        <h1>BUGTO<span className="span-yellow">NG</span></h1>
+        <p className="subtitle">Hulaan ang mga bugtong!</p>
       </header>
 
-      <div className='main-container'>
-        <div className='cross-container'>
-          <h3>{index < description.length ? description[index] : "THANK YOU FOR ANSWERING MY BUGTONG!"}</h3>
-
-          <form className="cross-box" onSubmit={(e) => submitAnswer(e, index)}>
-            {
-              index < description.length
-                ?
-                wordPuzzle[index].split('').map((letter, indx) =>
-                  <div key={indx} className='letter-box'>
-                    {
-                      indx % 2 === 0
-                        ?
-                        <input type="input" className='letter-input letter-value' onFocus={handleLetter} readOnly />
-                        :
-                        <input value={letter} className='letter-value default-letter' readOnly />
-                    }
-                  </div>
-                )
-                :
-                <div className='letter-box'></div>
-            }
-
-            <br />
-
-            {
-              index < description.length
-                ?
-                letterPuzz[index].split('').map((letter, indx) =>
-                  <button type="button" key={indx} className='rumble-letter' value={letter} onClick={(e) => putLetter(e, letter)}>{letter}</button>
-                )
-                :
-                <button type="button" className="try-again" onClick={tryAgain}>TRY AGAIN?</button>
-            }
-
-            <br />
-
-            {
-              index < description.length
-                ?
-                <button type='button' className='reset-btn'><FontAwesomeIcon icon={faArrowsRotate} onClick={handleReset} /></button>
-                :
-                <div></div>
-            }
-
-            <br />
-
-            {
-              index < description.length
-                ?
-                <button type="submit" className='submit-btn'>Submit</button>
-                :
-                <div></div>
-            }
-          </form>
-        </div>
-      </div>
-
+      <main className="main-container">
+        <section className="cross-container" aria-label="Bugtong game">
+          {!finished ? (
+            <>
+              <div className="progress-row">
+                <span>Bugtong {index + 1} sa {description.length}</span>
+                <span>{Math.round(index / description.length * 100)}% completed</span>
+              </div>
+              <div className="progress-track" role="progressbar" aria-valuenow={index} aria-valuemin={0} aria-valuemax={description.length} aria-label="Game progress">
+                <div className="progress-fill" style={{ width: `${index / description.length * 100}%` }} />
+              </div>
+              <h2 className="riddle">{description[index]}</h2>
+              <p className="instructions">Pumili ng letra sa ibaba. I-tap ang kahon para alisin ang letra.</p>
+              <form className="cross-box" onSubmit={submitAnswer}>
+                <div className="answer-row" aria-label="Your answer">
+                  {answer.split('').map((letter, slotIndex) => (
+                    <div key={slotIndex} className="letter-box">
+                      {slotIndex % 2 === 0 ? (
+                        <button
+                          type="button"
+                          className="letter-value letter-input"
+                          onClick={() => removeLetter(slotIndex)}
+                          disabled={!placedLetters[slotIndex]}
+                          aria-label={`Letter ${slotIndex + 1}: ${placedLetters[slotIndex]?.letter || 'empty'}`}
+                          title={placedLetters[slotIndex] ? 'Remove this letter' : 'Choose a letter below'}
+                        >{placedLetters[slotIndex]?.letter || '\u00a0'}</button>
+                      ) : (
+                        <span className="letter-value default-letter" aria-label={`Hint letter ${letter}`}>{letter}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="letter-bank" aria-label="Available letters">
+                  {letterPuzz[index].split('').map((letter, tileIndex) => (
+                    <button
+                      type="button"
+                      key={tileIndex}
+                      className="rumble-letter"
+                      onClick={() => putLetter(letter, tileIndex)}
+                      disabled={usedTiles.has(tileIndex)}
+                      aria-label={`Choose letter ${letter}`}
+                    >{letter}</button>
+                  ))}
+                </div>
+                <p className="feedback" role="status" aria-live="polite">{feedback || '\u00a0'}</p>
+                <div className="actions">
+                  <button type="button" className="reset-btn" onClick={handleReset} aria-label="Reset answer">
+                    <FontAwesomeIcon icon={faArrowsRotate} /> <span>Reset</span>
+                  </button>
+                  <button type="submit" className="submit-btn">Submit Answer</button>
+                </div>
+              </form>
+            </>
+          ) : (
+            <div className="finished-panel">
+              <div className="finish-icon" aria-hidden="true">★</div>
+              <h2>THANK YOU FOR ANSWERING MY BUGTONG!</h2>
+              <p>Mahusay! Nasagutan mo ang lahat ng {description.length} bugtong.</p>
+              <button type="button" className="try-again" onClick={tryAgain}>TRY AGAIN?</button>
+            </div>
+          )}
+        </section>
+      </main>
+      <footer className="game-footer">Bugtong-Bugtong · Filipino Riddle Game</footer>
     </div>
   );
 }
 
 export default App;
-/* 
- if(joinLetter == wordPuzzle[index]) {
-      no++;
-      setIndex(no); //PROCEED TO THE NEXT QUESTION
-    }else { 
-      alert("Wrong!");
-    };
-
-
-            {
-              wordPuzzle[index].split('').map((letter, indx) => 
-                <div key={indx} className='letter-box'>
-                  {
-                  indx % 2 === 0 
-                  ? 
-                  <input type="input" className='letter-input letter-value' onFocus={handleLetter} readOnly/>
-                  : 
-                  <input value={letter} className='letter-value default-letter' readOnly/>
-                  }
-                </div>
-              )
-            }
-*/
